@@ -30,7 +30,7 @@ $(document).ready(function(){
         if(name.length != "" && email.length != "" && password.length != ""){
             $.ajax({
                 type: "POST",
-                url: "action/signup_action.php",
+                url: "action/signup_action.php", 
                 data: {"name": name, "email": email, "role": 'customer', "password": password},
                 dataType: 'JSON',
                 success : function(feedback){

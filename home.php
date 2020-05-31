@@ -1,6 +1,7 @@
 <?php
 include "db.php";
 
+
 //if(!isset($_SESSION['id'])):
 //    header("location: action/login_action.php");
 //endif;
@@ -99,7 +100,8 @@ include "db.php";
             </div>
         </div>
     </content> 
-
+    
+    
     <script src="js/main.js"></script>
 
 </body>

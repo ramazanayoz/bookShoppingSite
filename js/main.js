@@ -1,14 +1,83 @@
 
 
-$(document).ready(function(){  
+$(document).ready(async function(){ 
  
-  totalNum = JSON.parse(sessionStorage.getItem("totalCartNum")); 
-  if(totalNum == null){
-    totalNum = 0;
-  }
-  $("#cartNum").text( totalNum['num']) ;
-
+  initiliazeTotalCardNum();
+  await fetchBookInCart();
   loadProducts();
+
+
+  //-----------INITILİAZE  TOTAL CART NUM
+  function initiliazeTotalCardNum(){
+    var totalNum = JSON.parse(sessionStorage.getItem("totalCartNum")); 
+    //totalNum = Number(totalNum);
+    if(totalNum == null){
+      totalNum = 0;
+    }
+    $("#cartNum").text( totalNum['num']) ;
+    getTotalCartNumFromDb();
+  }
+
+  //-----------FETCH BOOKS İN THE CART FROM DB  AND SET TO SESSİONSTRAGE
+  async function fetchBookInCart(){
+    $.ajax({
+      url: "action/cart_actions.php",
+      method: "POST",
+      data:{"action": "fetchBooksInCart"},
+      dataType:"JSON",
+      success: function(data){
+        console.log('totalCartNum $data.. ');
+        console.log(data);
+        data= JSON.stringify(data);
+        if(data!=0){
+          sessionStorage.setItem("incart", data);
+          displayCart();
+        }else{
+
+        }
+      }
+    });    
+  }
+
+  //--------------------- DECREASE BOOK NUM İN CART FROM DB 
+  function decreaseBookNumInCart(id){
+    $.ajax({
+      url: "action/cart_actions.php",
+      method: "POST",
+      data:{"action": "decreaseBooksInCarts", "book_id" : id},
+      success: function(data){
+        console.log("decreased clicked");
+        console.log(data);
+      }
+    });     
+  }
+
+    //--------------------- INCREASE BOOK NUM İN CART FROM DB 
+    function increaseBookNumInCart(book_id){
+      $.ajax({
+        url: "action/cart_actions.php",
+        method: "POST",
+        data:{"action": "addToCart", "book_id": book_id},
+        //dataType: 'JSON',
+        success: function(data){
+          console.log(data);
+        }
+      });  
+    }
+
+    //--------------------- INCREASE BOOK NUM İN CART FROM DB 
+    function deleteBookNumInCart(book_id){
+      $.ajax({
+        url: "action/cart_actions.php",
+        method: "POST",
+        data:{"action": "deleteBooksInCarts", "book_id": book_id},
+        //dataType: 'JSON',
+        success: function(data){
+          console.log(data);
+        }
+      });  
+    }
+
 
   //--------------LOAD PRODUCTS
   function loadProducts(){  
@@ -16,7 +85,7 @@ $(document).ready(function(){
       url: 'fetch/fetch_home.php',
       method: "POST",
       data:{category:"All"},
-      success: async function(data){
+      success: function(data){
         $(".container").html(data);
       }
     });
@@ -30,7 +99,7 @@ $(document).ready(function(){
       url:'fetch/fetch_home.php',
       method: "POST",
       data: {category: category},
-      success: async function(data){ 
+      success: function(data){ 
           $(".container").html(data);  
       }
     })
@@ -46,37 +115,63 @@ $(document).ready(function(){
       url:'fetch/fetch_home.php',
       method: "POST",
       data: form_data,
-      success: async function(data){ 
+      success: function(data){ 
           $(".container").html(data);
       }
     })
   });
 
+  //------------GETTİNG TOTAL CART NUM FROM DB
+   function getTotalCartNumFromDb() {
+    //Get totalCartNum from db
+    $.ajax({
+      url: "action/cart_actions.php",
+      method: "POST",
+      data:{"action": "fetchTotalCartNum"},
+      //dataType: 'JSON',
+      success: function(data){
+        console.log("totalCartNum" + data);
+        if(data!=0){
+          $("#cartNum").text( data);
+          data=  parseInt(data);
+          var totalNum = {["num"]: data };
+          totalNum = JSON.stringify(totalNum);
+          sessionStorage.setItem("totalCartNum", totalNum);
+          return data;
+        }
+      }
+    });
+  }
 
 
-  //-------------------------HW1 DEN KALMA SEPET İŞLEMİ İÇİN
-
+  //-------------------------HW2  SEPET İŞLEMİ İÇİN
   $(document).on('click', ".add-cart", function(){
-    var jsonArrayobject;
-    jsonArrayobject = JSON.parse(sessionStorage.getItem("incart"));
-    var totalCartNum;
-    var totalNum;
 
+    var jsonArrayobject;
+    var totalCartNum;
+    var totalNum;    
+    var img; 
+    var book_id;   
+    var name;
+    var price;
+
+    //initialize img, book_id, name, price, jsonArrayobject
+    jsonArrayobject = JSON.parse(sessionStorage.getItem("incart"));
     img = $(this).closest('.image').children('img')[0];
-    var img = $(img).attr('src');
-    var book_id = $(this).closest('.image').children('.cart1')[0];
+    img = $(img).attr('src');
+    book_id = $(this).closest('.image').children('.cart1')[0];
     book_id = $(book_id).attr("id");
-    var name = $(this).closest('.image').children('h3')[0].innerText;
-    var price = $(this).closest('.image').children('h3')[1].innerText;
+    name = $(this).closest('.image').children('h3')[0].innerText;
+    price = $(this).closest('.image').children('h3')[1].innerText;
     price = price.substring(0, price.indexOf(','));
     price = price.match(/\d/g);
-    price = price.join("");
+    price = price.join(""); 
 
     var xproduct = new XProduct(name,price,img,book_id);
     if(jsonArrayobject == null){
         xproduct.inCart = 1;
-        jsonArrayobject = { [xproduct.id]:  xproduct };
-        
+        console.log( "$xproduct.id" );
+        jsonArrayobject = {  [xproduct.id] :  xproduct }; //Y/:..
         totalNum = {["num"] : 1};
     }else{
         if(jsonArrayobject[xproduct.id] == undefined ){
@@ -94,9 +189,14 @@ $(document).ready(function(){
     
     totalNum = JSON.stringify(totalNum);
     sessionStorage.setItem("totalCartNum", totalNum);
+
+    //write to db when clicked  add to cart button
+    increaseBookNumInCart(xproduct.id);
+
   });
+
     
-});
+
 
 displayCart();
 
@@ -151,41 +251,44 @@ function displayCart(){ //cart.html için
     
     productContainer.innerHTML +=`
       <div class="btn-group">
-        <button onclick="hideCartPage()">Continue to shop</button>
-        <button onclick="displayShipingform()">Buy</button>
+        <button onclick="document.location.href='home.php'" >Continue to shop</button>
+        <button onclick="document.location.href='payment.php'">Buy</button>
       </div>
     `;
   }
   
 } 
 
-$(document).ready(function(){
+
 
   //----------------DECREASE CLİCKED
   $(document).on("click", ".decrease", function(){
     console.log("decrease clicked");
-     var incartJson= sessionStorage.getItem("incart");
-     incartJson = JSON.parse(incartJson);
-     id = $(this).attr("id");
-     console.log(" ..", id );
-     if(incartJson[id].inCart < 2 ){
-        delete incartJson[id];
-        incartJson =JSON.stringify(incartJson);
-        sessionStorage.setItem("incart", incartJson);
-        displayCart();
-     }else{
-        incartJson[id].inCart  -= 1;
-        incartJson = JSON.stringify(incartJson);
-        sessionStorage.setItem("incart", incartJson);
-        displayCart();
-      }
+    //for sessionStrage and ui part
+    var incartJson= sessionStorage.getItem("incart");
+    incartJson = JSON.parse(incartJson);
+    id = $(this).attr("id");
+    console.log(" ..", id );
+    if(incartJson[id].inCart < 2 ){
+      delete incartJson[id];
+      incartJson =JSON.stringify(incartJson);
+      sessionStorage.setItem("incart", incartJson);
+      displayCart();
+    }else{
+      incartJson[id].inCart  -= 1;
+      incartJson = JSON.stringify(incartJson);
+      sessionStorage.setItem("incart", incartJson);
+      displayCart();
+    }
 
-      totalNum = JSON.parse(sessionStorage.getItem("totalCartNum"));
-      totalNum["num"] -= 1; 
-      $("#cartNum").text( totalNum['num']) ;
-      totalNum = JSON.stringify(totalNum);
-      sessionStorage.setItem("totalCartNum", totalNum);
-      
+    totalNum = JSON.parse(sessionStorage.getItem("totalCartNum"));
+    totalNum["num"] -= 1; 
+    $("#cartNum").text( totalNum['num']) ;
+    totalNum = JSON.stringify(totalNum);
+    sessionStorage.setItem("totalCartNum", totalNum);
+    //for db part
+    decreaseBookNumInCart(id);
+
    });
 
    //----------------İNCREASE CLİCKED
@@ -202,35 +305,44 @@ $(document).ready(function(){
         totalNum = JSON.stringify(totalNum);
         sessionStorage.setItem("totalCartNum", totalNum);
 
-        incartJson[id].inCart  += 1;
+        incartJson[id].inCart  = Number(incartJson[id].inCart)+ 1;
         incartJson = JSON.stringify(incartJson);
         sessionStorage.setItem("incart", incartJson);
         displayCart();
-         
+        increaseBookNumInCart(id);
    });
 
    //------------------DELETE CLİCKED
   $(document).on("click", ".delete", function(){
+    //for sessionStrage and ui part
     console.log("delete clicked");
-     var incartJson= sessionStorage.getItem("incart");
-     incartJson = JSON.parse(incartJson);
-     id = $(this).attr("id");
-     console.log(" ..", id );
+    var incartJson= sessionStorage.getItem("incart");
+    incartJson = JSON.parse(incartJson);
+    id = $(this).attr("id");
+    console.log(" ..", id );
 
-        totalNum = JSON.parse(sessionStorage.getItem("totalCartNum"));
-        totalNum["num"] -= incartJson[id].inCart ; 
-        $("#cartNum").text( totalNum['num']) ;
-        totalNum = JSON.stringify(totalNum);
-        sessionStorage.setItem("totalCartNum", totalNum);
+    totalNum = JSON.parse(sessionStorage.getItem("totalCartNum"));
+    totalNum["num"] -= incartJson[id].inCart ; 
+    $("#cartNum").text( totalNum['num']) ;
+    totalNum = JSON.stringify(totalNum);
+    sessionStorage.setItem("totalCartNum", totalNum);
 
-        delete incartJson[id];
-        incartJson =JSON.stringify(incartJson);
-        sessionStorage.setItem("incart", incartJson);
-        displayCart();
-     
+    delete incartJson[id];
+    incartJson =JSON.stringify(incartJson);
+    sessionStorage.setItem("incart", incartJson);
+    displayCart();
+    deleteBookNumInCart(id);
+    
    });
 
 });
+
+
+
+
+
+
+
 
 
 class XProduct{
